@@ -1,0 +1,55 @@
+name: 'Extract Versions'
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions: write-all
+
+jobs:
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@main
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Install dependencies
+        run: |
+          make install_dependencies
+      - name: Extract versions
+        run: |
+          make extract_versions
+      - name: Commit changes
+        run: |
+          git config --local user.email "NDViet-CI@users.noreply.github.com"
+          git config --local user.name "Happy TestOps Robot"
+          git commit -m "[ci] Update list browser versions" -m "[skip test]" -a || true
+          git pull --rebase
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.ORG_CI_TOKEN }}
+      - name: Read list of versions
+        run: |
+          make read_versions
+          cat .env | xargs -I {} echo {} >> $GITHUB_ENV
+      - name: Call workflow archive build
+        uses: actions/github-script@main
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            const outputVersion = process.env.OUTPUT_VERSIONS;
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'archive-build.yml',
+              ref: context.ref,
+              inputs: {
+                versions: outputVersion
+              }
+            });
+        env:
+          GITHUB_TOKEN: ${{ secrets.ORG_CI_TOKEN }}
