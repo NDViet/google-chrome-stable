@@ -39,23 +39,25 @@ jobs:
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.ORG_CI_TOKEN }}
-      - name: Read list of versions
-        run: |
-          echo "OUTPUT_VERSIONS=[\"${LATEST_VERSION}\"]" >> $GITHUB_ENV
-      - name: Call workflow archive build
-        uses: actions/github-script@main
+      - name: Check if version was archived already
+        uses: insightsengineering/release-existence-action@main
+        id: check_release
         with:
-          script: |
-            const { execSync } = require('child_process');
-            const outputVersion = process.env.OUTPUT_VERSIONS;
-            github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'archive-build.yml',
-              ref: context.ref,
-              inputs: {
-                versions: outputVersion
-              }
-            });
-        env:
-          GITHUB_TOKEN: ${{ secrets.ORG_CI_TOKEN }}
+          release-tag: ${{ env.LATEST_VERSION }}
+      - name: Download deb package
+        if: steps.check_release.outputs.release-exists == 'false'
+        run: |
+          apt download google-chrome-stable
+          ls -l google-chrome-stable_*.deb
+      - name: Archive build as GH release
+        if: steps.check_release.outputs.release-exists == 'false'
+        uses: softprops/action-gh-release@master
+        with:
+          files: |
+            google-chrome-stable_*.deb
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ env.LATEST_VERSION }}
+          name: ${{ env.LATEST_VERSION }}
+          body: ${{ env.LATEST_VERSION }}
+          draft: false
+          prerelease: false
