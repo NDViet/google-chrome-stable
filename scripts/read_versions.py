@@ -12,7 +12,7 @@ def extract_versions_from_yaml(file_path):
     versions_string = str(versions).replace(' ', '')
     return versions_string
 
-file_path = 'output.yaml'
+file_path = 'browser-matrix.yml'
 versions_string = extract_versions_from_yaml(file_path)
 with open('.env', 'w') as file:
     file.write(f"OUTPUT_VERSIONS=\"{versions_string}\"")

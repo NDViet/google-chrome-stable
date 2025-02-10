@@ -32,7 +32,7 @@ for deb_file in deb_files:
             latest_versions[major_version] = package_version
 
 # Function to write results to a YAML file
-def write_to_yaml(latest_versions, filename="output.yaml"):
+def write_to_yaml(latest_versions, filename="browser-matrix.yml"):
     # Prepare the data structure for YAML
     yaml_data = {
         "matrix": {

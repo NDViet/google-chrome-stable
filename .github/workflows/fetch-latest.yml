@@ -1,12 +1,14 @@
-name: 'Extract Versions'
+name: 'Fetch Latest Version'
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
 
 permissions: write-all
 
 jobs:
-  extract-versions:
+  fetch-latest:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -17,14 +19,21 @@ jobs:
       - name: Install dependencies
         run: |
           make install_dependencies
-      - name: Extract versions
+      - name: Fetch APT repository
         run: |
-          make extract_versions
+          curl -fSsL https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor | sudo tee /usr/share/keyrings/google-chrome.gpg >> /dev/null
+          echo deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          LATEST_VERSION="$(apt-cache policy google-chrome-stable | grep Candidate | awk '{print $2}')"
+          echo "LATEST_VERSION=${LATEST_VERSION}" >> $GITHUB_ENV
+      - name: Update matrix file
+        run: |
+          python3 scripts/update_latest.py ${LATEST_VERSION}
       - name: Commit changes
         run: |
           git config --local user.email "NDViet-CI@users.noreply.github.com"
           git config --local user.name "Happy TestOps Robot"
-          git commit -m "[ci] Update list browser versions" -m "[skip test]" -a || true
+          git commit -m "[ci] Update version ${LATEST_VERSION}" -m "[skip test]" -a || true
           git pull --rebase
       - name: Push changes
         uses: ad-m/github-push-action@master
@@ -32,8 +41,7 @@ jobs:
           github_token: ${{ secrets.ORG_CI_TOKEN }}
       - name: Read list of versions
         run: |
-          make read_versions
-          cat .env | xargs -I {} echo {} >> $GITHUB_ENV
+          echo "OUTPUT_VERSIONS=[\"${LATEST_VERSION}\"]" >> $GITHUB_ENV
       - name: Call workflow archive build
         uses: actions/github-script@main
         with:
