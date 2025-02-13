@@ -7,4 +7,4 @@ releases.
 
 CI will run daily to check for new package version and create a new release if there is a new version.
 
-[![Releases downloads](https://img.shields.io/github/downloads/NDViet/google-chrome-stable-deb/total.svg)](https://github.com/NDViet/google-chrome-stable-deb/releases)
+[![Releases downloads](https://img.shields.io/github/downloads/NDViet/google-chrome-stable/total.svg)](https://github.com/NDViet/google-chrome-stable/releases)
