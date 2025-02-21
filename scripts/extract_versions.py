@@ -17,18 +17,30 @@ deb_files = [a['href'] for a in soup.find_all('a', href=True) if a['href'].endsw
 latest_versions = {}
 
 # Regular expression to extract version numbers
-version_pattern = re.compile(r'google-chrome-stable_(\d+\.\d+\.\d+\.\d+)-(\d+)_amd64\.deb')
+version_pattern = re.compile(r'google-chrome-stable_(\d+\.\d+\.\d+\.\d+-\d+)_amd64\.deb')
+
+def extract_version_parts(version_string):
+    match = version_pattern.search(version_string)
+    if match:
+        return match.group(1)
+    return None
+
+def compare_versions(version1, version2):
+    parts1 = extract_version_parts(version1)
+    parts2 = extract_version_parts(version2)
+
+    if parts1 and parts2:
+        return parts1 > parts2
+    return None
 
 for deb_file in deb_files:
     match = version_pattern.search(deb_file)
     if match:
-        full_version = match.group(1)  # Full version (e.g., 114.0.1823.51)
-        revision = match.group(2)  # Revision number (e.g., 1)
-        major_version = full_version.split('.')[0]  # Extract major version (e.g., 114)
-        package_version = f"{full_version}-{revision}"  # Full package version (e.g., 114.0.1823.51-1)
+        package_version = match.group(1)  # Extracted version part (e.g., 133.0.6943.126-1)
+        major_version = package_version.split('.')[0]  # Extract major version (e.g., 133)
 
         # Update the latest version for the major version
-        if major_version not in latest_versions or package_version > latest_versions[major_version]:
+        if major_version not in latest_versions or compare_versions(package_version, latest_versions[major_version]):
             latest_versions[major_version] = package_version
 
 # Function to write results to a YAML file
@@ -39,7 +51,7 @@ def write_to_yaml(latest_versions, filename="browser-matrix.yml"):
             "browser": {
                 major_version: {
                     "CHROME_VERSION": f"google-chrome-stable={package_version}",
-                    "CHROME_PACKAGE_VERSION": f"{package_version}"
+                    "CHROME_PACKAGE_VERSION": package_version
                 }
                 for major_version, package_version in sorted(latest_versions.items(), key=lambda item: int(item[0]), reverse=True)
             }
