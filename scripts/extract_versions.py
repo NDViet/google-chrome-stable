@@ -19,19 +19,29 @@ latest_versions = {}
 # Regular expression to extract version numbers
 version_pattern = re.compile(r'google-chrome-stable_(\d+\.\d+\.\d+\.\d+-\d+)_amd64\.deb')
 
-def extract_version_parts(version_string):
-    match = version_pattern.search(version_string)
-    if match:
-        return match.group(1)
-    return None
+def extract_version_parts(version):
+    # Assuming the version format is 'major.minor.patch-build'
+    # This function extracts the 'major.minor.patch' part
+    if '-' in version:
+        return version.split('-')[0]
+    return version
 
 def compare_versions(version1, version2):
     parts1 = extract_version_parts(version1)
     parts2 = extract_version_parts(version2)
 
-    if parts1 and parts2:
-        return parts1 > parts2
-    return None
+    if parts1 is None or parts2 is None:
+        return False
+
+    parts1 = parts1.split('.')
+    parts2 = parts2.split('.')
+
+    for part1, part2 in zip(parts1, parts2):
+        if int(part1) > int(part2):
+            return True
+        elif int(part1) < int(part2):
+            return False
+    return False
 
 for deb_file in deb_files:
     match = version_pattern.search(deb_file)
