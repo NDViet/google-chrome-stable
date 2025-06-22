@@ -23,11 +23,6 @@ jobs:
           fetch-depth: 0
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository universe
-          sudo apt-get update
-          sudo apt-get install -y dpkg-sig
           make install_dependencies
       - name: Fetch APT repository
         run: |
@@ -66,7 +61,7 @@ jobs:
           DEB_FILE=$(ls google-chrome-stable_*.deb)
           dpkg-deb -I $DEB_FILE > metadata.txt
           dpkg-deb -c $DEB_FILE > contents.txt
-          dpkg-sig --export $DEB_FILE > signature.asc
+          gpg --verify /usr/share/keyrings/google-chrome.gpg $DEB_FILE > signature.asc || true
       - name: Archive build as GH release
         if: steps.check_release.outputs.release-exists == 'false' ||
           github.event.inputs.update-existing-release == 'true'
