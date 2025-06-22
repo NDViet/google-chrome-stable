@@ -61,7 +61,6 @@ jobs:
           DEB_FILE=$(ls google-chrome-stable_*.deb)
           dpkg-deb -I $DEB_FILE > metadata.txt
           dpkg-deb -c $DEB_FILE > contents.txt
-          gpg --verify $DEB_FILE > signature.asc || true
       - name: Archive build as GH release
         if: steps.check_release.outputs.release-exists == 'false' ||
           github.event.inputs.update-existing-release == 'true'
@@ -71,7 +70,6 @@ jobs:
             google-chrome-stable_*.deb
             metadata.txt
             contents.txt
-            signature.asc
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ env.LATEST_VERSION }}
           name: ${{ env.LATEST_VERSION }}
