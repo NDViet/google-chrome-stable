@@ -2,6 +2,11 @@ name: 'Fetch Latest Version'
 
 on:
   workflow_dispatch:
+    inputs:
+      update-existing-release:
+        description: 'Force update an existing release'
+        required: false
+        default: 'false'
   schedule:
     - cron: '0 0 * * *'
 
@@ -45,16 +50,25 @@ jobs:
         with:
           release-tag: ${{ env.LATEST_VERSION }}
       - name: Download deb package
-        if: steps.check_release.outputs.release-exists == 'false'
+        if: steps.check_release.outputs.release-exists == 'false' || 
+            github.event.inputs.update-existing-release == 'true'
         run: |
           apt download google-chrome-stable
           ls -l google-chrome-stable_*.deb
+      - name: Get metadata from DEB package
+        id: get_metadata
+        run: |
+          DEB_FILE=$(ls google-chrome-stable_*.deb)
+          dpkg-deb -I $DEB_FILE > metadata.txt
+          dpkg-deb -f $DEB_FILE >> metadata.txt
       - name: Archive build as GH release
-        if: steps.check_release.outputs.release-exists == 'false'
+        if: steps.check_release.outputs.release-exists == 'false' ||
+          github.event.inputs.update-existing-release == 'true'
         uses: softprops/action-gh-release@master
         with:
           files: |
             google-chrome-stable_*.deb
+            metadata.txt
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ env.LATEST_VERSION }}
           name: ${{ env.LATEST_VERSION }}
