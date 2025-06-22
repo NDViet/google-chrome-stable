@@ -23,8 +23,12 @@ jobs:
           fetch-depth: 0
       - name: Install dependencies
         run: |
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository universe
+          sudo apt-get update
+          sudo apt-get install -y dpkg-sig
           make install_dependencies
-          sudo apt-get install dpkg-sig
       - name: Fetch APT repository
         run: |
           curl -fSsL https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor | sudo tee /usr/share/keyrings/google-chrome.gpg >> /dev/null
