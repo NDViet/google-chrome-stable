@@ -56,6 +56,8 @@ jobs:
           apt download google-chrome-stable
           ls -l google-chrome-stable_*.deb
       - name: Get metadata from DEB package
+        if: steps.check_release.outputs.release-exists == 'false' || 
+            github.event.inputs.update-existing-release == 'true'
         id: get_metadata
         run: |
           DEB_FILE=$(ls google-chrome-stable_*.deb)
