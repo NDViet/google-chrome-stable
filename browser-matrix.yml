@@ -1,8 +1,8 @@
 matrix:
   browser:
     '149':
-      CHROME_VERSION: google-chrome-stable=149.0.7827.196-1
-      CHROME_PACKAGE_VERSION: 149.0.7827.196-1
+      CHROME_VERSION: google-chrome-stable=149.0.7827.200-1
+      CHROME_PACKAGE_VERSION: 149.0.7827.200-1
     '148':
       CHROME_VERSION: google-chrome-stable=148.0.7778.215-1
       CHROME_PACKAGE_VERSION: 148.0.7778.215-1
