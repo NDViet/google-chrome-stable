@@ -1,25 +1,5 @@
 import yaml
 import sys
-import requests
-
-# Same pool used by extract_versions.py to discover published .deb packages.
-POOL_URL = "https://mirror.cs.uchicago.edu/google-chrome/pool/main/g/google-chrome-stable"
-
-
-def has_arm64_build(version):
-    """Return True when Google published an arm64 .deb for this exact version."""
-    deb = f"google-chrome-stable_{version}_arm64.deb"
-    try:
-        response = requests.head(f"{POOL_URL}/{deb}", allow_redirects=True, timeout=30)
-        return response.status_code == 200
-    except requests.RequestException:
-        return False
-
-
-def platforms_for(version):
-    if has_arm64_build(version):
-        return "linux/amd64,linux/arm64"
-    return "linux/amd64"
 
 
 def update_output_yaml(version):
@@ -27,21 +7,27 @@ def update_output_yaml(version):
     with open('browser-matrix.yml', 'r') as file:
         data = yaml.safe_load(file)
 
-    platforms = platforms_for(version)
+    browser = data['matrix']['browser']
 
-    if major_version in data['matrix']['browser']:
-        data['matrix']['browser'][major_version]['CHROME_VERSION'] = f'google-chrome-stable={version}'
-        data['matrix']['browser'][major_version]['CHROME_PACKAGE_VERSION'] = version
-        data['matrix']['browser'][major_version]['CHROME_PLATFORMS'] = platforms
+    if major_version in browser:
+        browser[major_version]['CHROME_VERSION'] = f'google-chrome-stable={version}'
+        browser[major_version]['CHROME_PACKAGE_VERSION'] = version
+        # Preserve any existing CHROME_PLATFORMS. The reconcile step in the
+        # workflow sets it from the packages actually archived to the release,
+        # so we must not downgrade linux/amd64,linux/arm64 back to linux/amd64
+        # here just because arm64 has not been archived yet.
+        browser[major_version].setdefault('CHROME_PLATFORMS', 'linux/amd64')
     else:
-        data['matrix']['browser'][major_version] = {
+        # amd64 is always available; the reconcile step upgrades this to
+        # include linux/arm64 once the arm64 package has been archived.
+        browser[major_version] = {
             'CHROME_VERSION': f'google-chrome-stable={version}',
             'CHROME_PACKAGE_VERSION': version,
-            'CHROME_PLATFORMS': platforms
+            'CHROME_PLATFORMS': 'linux/amd64'
         }
 
     # Sort the dictionary by major_version as a number
-    sorted_data = dict(sorted(data['matrix']['browser'].items(), key=lambda x: int(x[0]), reverse=True))
+    sorted_data = dict(sorted(browser.items(), key=lambda x: int(x[0]), reverse=True))
     data['matrix']['browser'] = sorted_data
 
     with open('browser-matrix.yml', 'w') as file:

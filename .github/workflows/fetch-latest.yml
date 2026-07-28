@@ -134,3 +134,49 @@ jobs:
           body: ${{ env.LATEST_VERSION }}
           draft: false
           prerelease: false
+
+  update-platforms:
+    # Reconcile CHROME_PLATFORMS from the packages actually archived to the
+    # release. Runs after every architecture has finished (amd64 usually lands
+    # before arm64 is published), so linux/arm64 is recorded as soon as the
+    # arm64 package exists on the release, on this run or a later one.
+    needs: [fetch-latest, archive]
+    if: always() && needs.fetch-latest.result == 'success'
+    runs-on: ubuntu-latest
+    env:
+      LATEST_VERSION: ${{ needs.fetch-latest.outputs.latest_version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@main
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Install dependencies
+        run: |
+          make install_dependencies
+      - name: Determine archived platforms
+        id: platforms
+        run: |
+          ARM64_ASSET="google-chrome-stable_${LATEST_VERSION}_arm64.deb"
+          if gh release view "${LATEST_VERSION}" \
+               --repo "${{ github.repository }}" \
+               --json assets --jq '.assets[].name' 2>/dev/null | grep -qx "${ARM64_ASSET}"; then
+            echo "value=linux/amd64,linux/arm64" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=linux/amd64" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update matrix platforms
+        run: |
+          python3 scripts/update_platforms.py "${LATEST_VERSION}" "${{ steps.platforms.outputs.value }}"
+      - name: Commit changes
+        run: |
+          git config --local user.email "NDViet-CI@users.noreply.github.com"
+          git config --local user.name "Happy TestOps Robot"
+          git commit -m "[ci] Update platforms ${LATEST_VERSION} (${{ steps.platforms.outputs.value }})" -m "[skip test]" -a || true
+          git pull --rebase
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.ORG_CI_TOKEN }}
