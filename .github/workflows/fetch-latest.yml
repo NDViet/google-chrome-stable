@@ -134,6 +134,48 @@ jobs:
           body: ${{ env.LATEST_VERSION }}
           draft: false
           prerelease: false
+      # Google ships no linux/arm64 ChromeDriver, so for arm64 fetch the
+      # matching-major driver from Debian's chromium-driver package instead.
+      - name: Check if arm64 ChromeDriver was archived already
+        if: matrix.arch == 'arm64'
+        id: check_driver
+        run: |
+          ASSET="chromedriver_${LATEST_VERSION}_arm64.zip"
+          if gh release view "${LATEST_VERSION}" \
+               --repo "${{ github.repository }}" \
+               --json assets --jq '.assets[].name' 2>/dev/null | grep -qx "${ASSET}"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Fetch arm64 ChromeDriver from Debian
+        if: matrix.arch == 'arm64' &&
+            (steps.check_driver.outputs.exists == 'false' ||
+             github.event.inputs.update-existing-release == 'true')
+        id: driver
+        run: |
+          python3 scripts/fetch_debian_chromedriver.py "${LATEST_VERSION}" .
+          if ls chromedriver_*_arm64.zip >/dev/null 2>&1; then
+            echo "packaged=true" >> "$GITHUB_OUTPUT"
+            sha256sum chromedriver_*_arm64.zip > chromedriver_arm64.sha256
+          else
+            echo "packaged=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Archive arm64 ChromeDriver as GH release
+        if: matrix.arch == 'arm64' && steps.driver.outputs.packaged == 'true'
+        uses: softprops/action-gh-release@master
+        with:
+          files: |
+            chromedriver_*_arm64.zip
+            chromedriver_arm64.sha256
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ env.LATEST_VERSION }}
+          name: ${{ env.LATEST_VERSION }}
+          body: ${{ env.LATEST_VERSION }}
+          draft: false
+          prerelease: false
 
   update-platforms:
     # Reconcile CHROME_PLATFORMS from the packages actually archived to the
