@@ -149,6 +149,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@main
         with:
+          # Check out the tip of the branch, not the workflow trigger SHA:
+          # the fetch-latest job pushed the version bump after this run
+          # started, and that commit must be present so the entry exists.
+          ref: main
           persist-credentials: false
           fetch-depth: 0
       - name: Install dependencies
