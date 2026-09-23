@@ -3,7 +3,7 @@ matrix:
     '154':
       CHROME_VERSION: google-chrome-stable=154.0.8037.57-1
       CHROME_PACKAGE_VERSION: 154.0.8037.57-1
-      CHROME_PLATFORMS: linux/amd64
+      CHROME_PLATFORMS: linux/amd64,linux/arm64
     '153':
       CHROME_VERSION: google-chrome-stable=153.0.8010.52-1
       CHROME_PACKAGE_VERSION: 153.0.8010.52-1
